@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Edukinglish: Multi-Level Quest</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      background: #0f0c20;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    #game-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      aspect-ratio: 16 / 10;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: #181436;
+      border: 3px solid #f39c12;
+      border-radius: 12px;
+      box-shadow: 0 0 25px rgba(243, 156, 18, 0.4);
+      overflow: hidden;
+    }
+
+    #game-container.maximized {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: none !important;
+      z-index: 999999 !important;
+      border: none !important;
+      border-radius: 0 !important;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: #2c3e50;
+    }
+
+    .screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 12, 32, 0.94);
+      z-index: 10;
+      padding: 15px;
+      text-align: center;
+      overflow-y: auto;
+    }
+
+    .hidden { display: none !important; }
+
+    h1 { font-size: clamp(20px, 4vw, 32px); color: #f39c12; text-shadow: 2px 2px #c0392b; margin-bottom: 8px; }
+    h2 { font-size: clamp(18px, 3.5vw, 24px); color: #2ecc71; margin-bottom: 12px; }
+    p { font-size: clamp(12px, 2.5vw, 16px); color: #ecf0f1; margin-bottom: 12px; max-width: 600px; line-height: 1.3; }
+
+    input[type="text"] {
+      padding: 8px 12px;
+      font-size: clamp(14px, 3vw, 18px);
+      border-radius: 8px;
+      border: 2px solid #f39c12;
+      background: #181436;
+      color: #fff;
+      outline: none;
+      text-align: center;
+      margin-bottom: 15px;
+      width: 80%;
+      max-width: 280px;
+    }
+
+    .char-selector { display: flex; gap: 10px; margin-bottom: 15px; }
+    .char-card {
+      background: #241d4d;
+      border: 2px solid #34495e;
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: clamp(80px, 20vw, 130px);
+    }
+    .char-card:hover, .char-card.selected {
+      border-color: #f39c12;
+      transform: translateY(-3px);
+      background: #342a6d;
+    }
+
+    .char-avatar {
+      width: clamp(35px, 8vw, 55px);
+      height: clamp(35px, 8vw, 55px);
+      margin: 0 auto 6px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(20px, 5vw, 30px);
+      background: #1a153a;
+    }
+
+    .btn {
+      background: #e67e22;
+      color: #fff;
+      border: none;
+      padding: 10px 22px;
+      font-size: clamp(14px, 3vw, 18px);
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #d35400;
+    }
+
+    .fs-btn {
+      background: #34495e;
+      color: #fff;
+      border: 1px solid #f39c12;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    /* Modal Quiz */
+    .quiz-modal {
+      background: #1f1947;
+      border: 3px solid #9b59b6;
+      border-radius: 12px;
+      padding: 15px;
+      max-width: 550px;
+      width: 95%;
+      box-shadow: 0 0 20px rgba(155, 89, 182, 0.5);
+    }
+
+    .quiz-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .quiz-opt {
+      background: #2c2463;
+      border: 2px solid #8e44ad;
+      color: #fff;
+      padding: 10px;
+      font-size: clamp(12px, 2.5vw, 15px);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .audio-btn {
+      background: #2980b9;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+
+    #hud {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      right: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .hud-box {
+      background: rgba(15, 12, 32, 0.85);
+      padding: 4px 10px;
+      border-radius: 15px;
+      border: 1.5px solid #f39c12;
+      font-weight: bold;
+      font-size: clamp(10px, 2.2vw, 13px);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* CONTROLES TÁCTILES PARA CELULAR */
+    #touch-controls {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 6;
+    }
+
+    .touch-group {
+      display: flex;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .touch-btn {
+      width: 50px;
+      height: 50px;
+      background: rgba(243, 156, 18, 0.35);
+      border: 2px solid #f39c12;
+      border-radius: 50%;
+      color: #fff;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      backdrop-filter: blur(2px);
+    }
+    .touch-btn:active { background: rgba(243, 156, 18, 0.7); }
+
+    .code-box {
+      background: #27ae60;
+      color: white;
+      padding: 8px 15px;
+      border-radius: 8px;
+      font-size: clamp(16px, 4vw, 22px);
+      letter-spacing: 2px;
+      font-family: monospace;
+      margin: 10px 0;
+      border: 2px dashed #fff;
+    }
+  </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+  <div id="game-container">
+
+    <!-- HUD -->
+    <div id="hud">
+      <div class="hud-box">👤 <span id="hud-player">Hero</span></div>
+      <div class="hud-box">❤️ <span id="hud-lives">3</span></div>
+      <div class="hud-box">🌍 Lvl: <span id="hud-world">1</span></div>
+      <div class="hud-box">⭐ <span id="hud-stars">0</span></div>
+      <div class="hud-box">🚀 <span id="hud-jet">YES</span></div>
+      <button class="fs-btn" id="fsBtn" onclick="toggleFullScreen()">⛶ Expand</button>
+    </div>
+
+    <!-- CANVAS -->
+    <canvas id="gameCanvas" width="900" height="550"></canvas>
+
+    <!-- CONTROLES TÁCTILES MOVILES -->
+    <div id="touch-controls">
+      <div class="touch-group">
+        <div class="touch-btn" id="btn-left">◀</div>
+        <div class="touch-btn" id="btn-right">▶</div>
+      </div>
+      <div class="touch-group">
+        <div class="touch-btn" id="btn-jump" style="width:60px; border-radius:15px; background:rgba(46, 204, 113, 0.4); border-color:#2ecc71;">🚀 JUMP</div>
+      </div>
+    </div>
+
+    <!-- START SCREEN -->
+    <div id="start-screen" class="screen">
+      <h1>Edukinglish: Multi-Level Quest</h1>
+      <p>50 Levels of English Challenges! Dodge distractions, collect <b>100 Edu-Stars for extra lives</b>, and unlock real rewards!</p>
+      
+      <input type="text" id="player-name" placeholder="Enter Your Nickname" maxlength="15" value="Edu-Hero">
+
+      <p style="margin-bottom: 6px; font-weight: bold;">Choose Your Character:</p>
+      <div class="char-selector">
+        <div class="char-card selected" onclick="selectChar('kingly', this)">
+          <div class="char-avatar">🦊</div>
+          <b>Kingly</b>
+        </div>
+        <div class="char-card" onclick="selectChar('mooney', this)">
+          <div class="char-avatar">🐱</div>
+          <b>Mooney</b>
+        </div>
+        <div class="char-card" onclick="selectChar('dogito', this)">
+          <div class="char-avatar">🐶</div>
+          <b>Dogito</b>
+        </div>
+      </div>
+
+      <button class="btn" onclick="startGame()">START ADVENTURE!</button>
+    </div>
+
+    <!-- QUIZ SCREEN -->
+    <div id="quiz-screen" class="screen hidden">
+      <div class="quiz-modal">
+        <h2 id="quiz-title">Knowledge Gate!</h2>
+        <button class="audio-btn" onclick="speakCurrentQuestion()">🔊 Listen Audio</button>
+        <p id="quiz-question" style="font-size: 16px; margin: 10px 0;">Yesterday, I ______ (walk) to school.</p>
+        <div id="quiz-hint" style="color: #f1c40f; font-size: 12px; margin-bottom: 8px;">Hint: Sound /-t/</div>
+        <div class="quiz-options" id="quiz-options"></div>
+      </div>
+    </div>
+
+    <!-- WIN SCREEN -->
+    <div id="win-screen" class="screen hidden">
+      <h2>🎉 Block Completed! 🎉</h2>
+      <p>Congratulations <b id="win-player-name" style="color:#f39c12;"></b>! You mastered this 10-level challenge!</p>
+      <p>Your Official Edukinglish Claim Code is:</p>
+      <div class="code-box" id="claim-code">EK-BLOCK1-HERO-9912</div>
+      <p style="font-size: 12px;">Screenshot or copy this code to claim your reward!</p>
+      <button class="btn" onclick="nextBlock()">NEXT LEVEL BLOCK!</button>
+    </div>
+
+    <!-- GAME OVER SCREEN -->
+    <div id="gameover-screen" class="screen hidden">
+      <h1 style="color: #e74c3c; font-size: 36px;">GAME OVER</h1>
+      <p>You ran out of lives! Learning takes practice. Try again!</p>
+      <button class="btn" onclick="restartGame()">RESTART ADVENTURE</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const container = document.getElementById('game-container');
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+
+  let playerName = "Edu-Hero";
+  let selectedChar = "kingly";
+  let currentLevel = 1;
+  let totalStars = 0;
+  let nextExtraLifeThreshold = 100;
+  let lives = 3;
+  const MAX_LIVES = 10;
+  let hasJetpack = true;
+
+  // Question Banks (1-50)
+  const regularPastQuestions = [
+    { base: "walk", verb: "walked", sound: "Regular Past (/-t/)", opts: ["walked", "walken", "walkting", "walks"], sentence: "Yesterday, Kingly ______ to school." },
+    { base: "dance", verb: "danced", sound: "Regular Past (/-t/)", opts: ["danced", "danceed", "dancing", "dances"], sentence: "At the party, they ______ happily." },
+    { base: "paint", verb: "painted", sound: "Regular Past (/-id/)", opts: ["painted", "paint", "painting", "paints"], sentence: "Mooney ______ a beautiful house." },
+    { base: "clean", verb: "cleaned", sound: "Regular Past (/-d/)", opts: ["cleaned", "cleanned", "cleanning", "cleans"], sentence: "Dogito ______ his bedroom." },
+    { base: "help", verb: "helped", sound: "Regular Past (/-t/)", opts: ["helped", "helpen", "helping", "helps"], sentence: "The students ______ each other." },
+    { base: "play", verb: "played", sound: "Regular Past (/-d/)", opts: ["played", "playded", "playing", "plays"], sentence: "We ______ English games." },
+    { base: "cook", verb: "cooked", sound: "Regular Past (/-t/)", opts: ["cooked", "cooken", "cookking", "cooks"], sentence: "My mom ______ delicious soup." },
+    { base: "listen", verb: "listened", sound: "Regular Past (/-d/)", opts: ["listened", "listenid", "listening", "listens"], sentence: "They ______ to the teacher." },
+    { base: "visit", verb: "visited", sound: "Regular Past (/-id/)", opts: ["visited", "visiting", "visit", "visits"], sentence: "Kingly ______ his grandparents." },
+    { base: "watch", verb: "watched", sound: "Regular Past (/-t/)", opts: ["watched", "watchen", "watching", "watches"], sentence: "We ______ a great movie." }
+  ];
+
+  const irregularPastQuestions = [
+    { base: "go", verb: "went", sound: "Irregular Past", opts: ["went", "goed", "gone", "going"], sentence: "Last week, I ______ to the park." },
+    { base: "eat", verb: "ate", sound: "Irregular Past", opts: ["ate", "eated", "eaten", "eats"], sentence: "Dogito ______ an apple yesterday." },
+    { base: "see", verb: "saw", sound: "Irregular Past", opts: ["saw", "seed", "seen", "seeing"], sentence: "Mooney ______ a cute bird." },
+    { base: "buy", verb: "bought", sound: "Irregular Past", opts: ["bought", "buyed", "buys", "buying"], sentence: "My dad ______ a new bicycle." },
+    { base: "have", verb: "had", sound: "Irregular Past", opts: ["had", "haved", "has", "having"], sentence: "We ______ a fun class yesterday." },
+    { base: "run", verb: "ran", sound: "Irregular Past", opts: ["ran", "runned", "runs", "running"], sentence: "Kingly ______ fast in the race." },
+    { base: "write", verb: "wrote", sound: "Irregular Past", opts: ["wrote", "writed", "written", "writes"], sentence: "She ______ a letter in English." },
+    { base: "sleep", verb: "slept", sound: "Irregular Past", opts: ["slept", "sleeped", "sleeps", "sleeping"], sentence: "The dog ______ under the bed." },
+    { base: "drink", verb: "drank", sound: "Irregular Past", opts: ["drank", "drinked", "drinks", "drinking"], sentence: "I ______ fresh orange juice." },
+    { base: "make", verb: "made", sound: "Irregular Past", opts: ["made", "naked", "makes", "making"], sentence: "They ______ a delicious cake." }
+  ];
+
+  const listeningQuestions = [
+    { base: "Listen", verb: "purple", sound: "Listening", opts: ["purple", "yellow", "orange", "blue"], sentence: "Listen carefully! Select what you hear:" },
+    { base: "Listen", verb: "elephant", sound: "Listening", opts: ["elephant", "giraffe", "monkey", "tiger"], sentence: "Listen carefully! Select what you hear:" },
+    { base: "Listen", verb: "swimming", sound: "Listening", opts: ["swimming", "running", "jumping", "flying"], sentence: "Listen carefully! Select what you hear:" },
+    { base: "Listen", verb: "breakfast", sound: "Listening", opts: ["breakfast", "lunch", "dinner", "snack"], sentence: "Listen carefully! Select what you hear:" },
+    { base: "Listen", verb: "umbrella", sound: "Listening", opts: ["umbrella", "jacket", "shoes", "hat"], sentence: "Listen carefully! Select what you hear:" },
+    { base: "Listen", verb: "sunflower", sound: "Listening", opts: ["sunflower", "rose", "tree", "grass"], sentence: "Listen carefully! Select what you hear:" },
+    { base: "Listen", verb: "thursday", sound: "Listening", opts: ["thursday", "tuesday", "monday", "friday"], sentence: "Listen carefully! Select what you hear:" },
+    { base: "Listen", verb: "hospital", sound: "Listening", opts: ["hospital", "school", "library", "store"], sentence: "Listen carefully! Select what you hear:" },
+    { base: "Listen", verb: "scary", sound: "Listening", opts: ["scary", "happy", "angry", "tired"], sentence: "Listen carefully! Select what you hear:" },
+    { base: "Listen", verb: "ninety", sound: "Listening", opts: ["ninety", "nineteen", "nine", "ninety-nine"], sentence: "Listen carefully! Select what you hear:" }
+  ];
+
+  const presentHabitsQuestions = [
+    { base: "brush", verb: "brushes", sound: "Present Habit", opts: ["brushes", "brush", "brushed", "brushing"], sentence: "Every morning, Kingly ______ his teeth." },
+    { base: "play", verb: "plays", sound: "Present Habit", opts: ["plays", "play", "played", "playing"], sentence: "She always ______ soccer on Fridays." },
+    { base: "study", verb: "studies", sound: "Present Habit", opts: ["studies", "study", "studied", "studying"], sentence: "Mooney ______ English every afternoon." },
+    { base: "go", verb: "goes", sound: "Present Habit", opts: ["goes", "go", "went", "going"], sentence: "Dogito ______ to the park on Sundays." },
+    { base: "watch", verb: "watches", sound: "Present Habit", opts: ["watches", "watch", "watched", "watching"], sentence: "He usually ______ cartoons at night." },
+    { base: "eat", verb: "eats", sound: "Present Habit", opts: ["eats", "eat", "ate", "eating"], sentence: "The cat ______ fish for lunch." },
+    { base: "drink", verb: "drinks", sound: "Present Habit", opts: ["drinks", "drink", "drank", "drinking"], sentence: "She always ______ water after running." },
+    { base: "read", verb: "reads", sound: "Present Habit", opts: ["reads", "read", "reading", "readed"], sentence: "My brother ______ comic books daily." },
+    { base: "wake up", verb: "wakes up", sound: "Present Habit", opts: ["wakes up", "wake up", "woke up", "waking up"], sentence: "Kingly ______ early every morning." },
+    { base: "wash", verb: "washes", sound: "Present Habit", opts: ["washes", "wash", "washed", "washing"], sentence: "Dogito ______ his hands before dinner." }
+  ];
+
+  const advancedListeningQuestions = [
+    { base: "Listen", verb: "She eats pizza every Friday", sound: "Sentence Audio", opts: ["She eats pizza every Friday", "She ate pizza last Friday", "She is eating pizza now", "She likes eating pizza"], sentence: "Press Listen and select the exact sentence!" },
+    { base: "Listen", verb: "They played soccer in the afternoon", sound: "Sentence Audio", opts: ["They played soccer in the afternoon", "They play soccer every afternoon", "They will play soccer tomorrow", "They are playing soccer"], sentence: "Press Listen and select the exact sentence!" },
+    { base: "Listen", verb: "I wake up at seven o'clock", sound: "Sentence Audio", opts: ["I wake up at seven o'clock", "I woke up at six o'clock", "I sleep at seven o'clock", "I wake up at eight o'clock"], sentence: "Press Listen and select the exact sentence!" },
+    { base: "Listen", verb: "Kingly bought a new book yesterday", sound: "Sentence Audio", opts: ["Kingly bought a new book yesterday", "Kingly buys new books every day", "Kingly read a new book yesterday", "Kingly is reading a book"], sentence: "Press Listen and select the exact sentence!" },
+    { base: "Listen", verb: "We are learning English together", sound: "Sentence Audio", opts: ["We are learning English together", "We learned English yesterday", "We learn English on Mondays", "We like English very much"], sentence: "Press Listen and select the exact sentence!" },
+    { base: "Listen", verb: "Dogito cleans his room every Saturday", sound: "Sentence Audio", opts: ["Dogito cleans his room every Saturday", "Dogito cleaned his room yesterday", "Dogito is cleaning his room", "Dogito likes a clean room"], sentence: "Press Listen and select the exact sentence!" },
+    { base: "Listen", verb: "Mooney painted a beautiful sunrise", sound: "Sentence Audio", opts: ["Mooney painted a beautiful sunrise", "Mooney paints sunrises every day", "Mooney sees a beautiful sunrise", "Mooney likes painting flowers"], sentence: "Press Listen and select the exact sentence!" },
+    { base: "Listen", verb: "My family cooked a special dinner", sound: "Sentence Audio", opts: ["My family cooked a special dinner", "My family cooks dinner every night", "My family is cooking lunch", "My family ate dinner"], sentence: "Press Listen and select the exact sentence!" },
+    { base: "Listen", verb: "I listened to the teacher carefully", sound: "Sentence Audio", opts: ["I listened to the teacher carefully", "I listen to music every night", "I spoke to the teacher carefully", "I am listening to music"], sentence: "Press Listen and select the exact sentence!" },
+    { base: "Listen", verb: "They went to the beach last summer", sound: "Sentence Audio", opts: ["They went to the beach last summer", "They go to the beach every summer", "They like the beach in summer", "They are going to the beach"], sentence: "Press Listen and select the exact sentence!" }
+  ];
+
+  let currentQuiz = null;
+  const keys = { left: false, right: false, up: false };
+
+  // TECLADO Y TOUCH EVENTS
+  window.addEventListener('keydown', e => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+    if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+    if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') keys.up = true;
+  });
+
+  window.addEventListener('keyup', e => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+    if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+    if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') keys.up = false;
+  });
+
+  // VIRTUAL TOUCH BUTTONS
+  const setupTouchBtn = (id, keyName) => {
+    const btn = document.getElementById(id);
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyName] = false; });
+    btn.addEventListener('mousedown', () => keys[keyName] = true);
+    btn.addEventListener('mouseup', () => keys[keyName] = false);
+  };
+  setupTouchBtn('btn-left', 'left');
+  setupTouchBtn('btn-right', 'right');
+  setupTouchBtn('btn-jump', 'up');
+
+  function toggleFullScreen() {
+    container.classList.toggle('maximized');
+    const fsBtn = document.getElementById('fsBtn');
+    if (container.classList.contains('maximized')) fsBtn.innerText = "🗗 Reduce";
+    else fsBtn.innerText = "⛶ Expand";
+  }
+
+  const player = { x: 50, y: 400, w: 32, h: 42, vx: 0, vy: 0, speed: 4, gravity: 0.4, jumpForce: -8.5, grounded: false };
+  let platforms = [], stars = [], jetpackItem = null, chest = null, distractions = [];
+
+  function selectChar(char, el) {
+    selectedChar = char;
+    document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function stopAllAudio() {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  }
+
+  function startGame() {
+    stopAllAudio();
+    const inputName = document.getElementById('player-name').value.trim();
+    if (inputName) playerName = inputName;
+    document.getElementById('hud-player').innerText = playerName;
+
+    document.getElementById('start-screen').classList.add('hidden');
+    lives = 3; totalStars = 0; nextExtraLifeThreshold = 100;
+    loadLevel(1);
+    requestAnimationFrame(gameLoop);
+  }
+
+  function loadLevel(lvl) {
+    stopAllAudio();
+    currentLevel = lvl;
+    const subIndex = ((currentLevel - 1) % 10) + 1;
+    hasJetpack = (subIndex <= 3);
+
+    document.getElementById('hud-world').innerText = currentLevel;
+    document.getElementById('hud-stars').innerText = totalStars;
+    document.getElementById('hud-lives').innerText = lives;
+    document.getElementById('hud-jet').innerText = hasJetpack ? "YES" : "NO";
+
+    player.x = 50; player.y = 400; player.vx = 0; player.vy = 0;
+
+    if (currentLevel <= 10) {
+      platforms = [{ x: 0, y: 500, w: 900, h: 50 }, { x: 180, y: 380, w: 140, h: 20 }, { x: 380, y: 290, w: 140, h: 20 }, { x: 600, y: 200, w: 150, h: 20 }, { x: 750, y: 380, w: 100, h: 20 }];
+      chest = { x: 800, y: 150, w: 35, h: 35, opened: false };
+    } else if (currentLevel <= 20) {
+      platforms = [{ x: 0, y: 500, w: 900, h: 50 }, { x: 100, y: 200, w: 140, h: 20 }, { x: 300, y: 300, w: 160, h: 20 }, { x: 520, y: 400, w: 150, h: 20 }, { x: 700, y: 280, w: 120, h: 20 }];
+      chest = { x: 120, y: 150, w: 35, h: 35, opened: false };
+    } else if (currentLevel <= 30) {
+      platforms = [{ x: 0, y: 500, w: 900, h: 50 }, { x: 150, y: 410, w: 120, h: 20 }, { x: 300, y: 320, w: 120, h: 20 }, { x: 450, y: 220, w: 120, h: 20 }, { x: 620, y: 350, w: 140, h: 20 }];
+      chest = { x: 490, y: 170, w: 35, h: 35, opened: false };
+    } else if (currentLevel <= 40) {
+      platforms = [{ x: 0, y: 500, w: 900, h: 50 }, { x: 80, y: 320, w: 150, h: 20 }, { x: 350, y: 380, w: 180, h: 20 }, { x: 650, y: 240, w: 160, h: 20 }];
+      chest = { x: 720, y: 190, w: 35, h: 35, opened: false };
+    } else {
+      platforms = [{ x: 0, y: 500, w: 900, h: 50 }, { x: 120, y: 400, w: 100, h: 20 }, { x: 280, y: 300, w: 100, h: 20 }, { x: 450, y: 200, w: 120, h: 20 }, { x: 650, y: 310, w: 110, h: 20 }, { x: 780, y: 420, w: 90, h: 20 }];
+      chest = { x: 480, y: 150, w: 35, h: 35, opened: false };
+    }
+
+    stars = [{ x: 230, y: 340, collected: false }, { x: 430, y: 250, collected: false }, { x: 650, y: 160, collected: false }];
+    if (currentLevel > 10) { stars.push({ x: 320, y: 260, collected: false }); stars.push({ x: 750, y: 240, collected: false }); }
+    if (currentLevel > 30) { stars.push({ x: 150, y: 280, collected: false }); stars.push({ x: 500, y: 170, collected: false }); }
+
+    jetpackItem = !hasJetpack ? { x: 200, y: 460, collected: false } : null;
+
+    distractions = [];
+    if (subIndex >= 2) distractions.push({ type: 'phone', x: 400, y: 465, w: 22, h: 30, vx: 2, minX: 350, maxX: 600 });
+    if (subIndex >= 4) distractions.push({ type: 'burger', x: 320, y: 260, w: 26, h: 24, vx: 1.5, minX: 280, maxX: 420 });
+  }
+
+  function gameLoop() {
+    update();
+    render();
+    requestAnimationFrame(gameLoop);
+  }
+
+  function update() {
+    if (keys.left) player.vx = -player.speed;
+    else if (keys.right) player.vx = player.speed;
+    else player.vx = 0;
+
+    if (keys.up) {
+      if (player.grounded) { player.vy = player.jumpForce; player.grounded = false; }
+      else if (hasJetpack) { player.vy -= 0.5; if (player.vy < -5) player.vy = -5; }
+    }
+
+    player.vy += player.gravity; player.x += player.vx; player.y += player.vy;
+    if (player.x < 0) player.x = 0;
+    if (player.x + player.w > canvas.width) player.x = canvas.width - player.w;
+
+    player.grounded = false;
+    platforms.forEach(p => {
+      if (player.x < p.x + p.w && player.x + player.w > p.x && player.y + player.h > p.y && player.y + player.h < p.y + p.h + player.vy) {
+        player.y = p.y - player.h; player.vy = 0; player.grounded = true;
+      }
+    });
+
+    stars.forEach(s => {
+      if (!s.collected && Math.hypot((player.x + 16) - s.x, (player.y + 20) - s.y) < 25) {
+        s.collected = true; totalStars += 10;
+        document.getElementById('hud-stars').innerText = totalStars;
+        if (totalStars >= nextExtraLifeThreshold) {
+          nextExtraLifeThreshold += 100;
+          if (lives < MAX_LIVES) { lives++; document.getElementById('hud-lives').innerText = lives; }
+        }
+      }
+    });
+
+    if (jetpackItem && !jetpackItem.collected) {
+      if (Math.hypot((player.x + 16) - jetpackItem.x, (player.y + 20) - jetpackItem.y) < 25) {
+        jetpackItem.collected = true; hasJetpack = true; document.getElementById('hud-jet').innerText = "YES";
+      }
+    }
+
+    distractions.forEach(d => {
+      d.x += d.vx; if (d.x < d.minX || d.x > d.maxX) d.vx *= -1;
+      if (Math.abs((player.x + 16) - (d.x + 12)) < 22 && Math.abs((player.y + 20) - (d.y + 12)) < 22) {
+        lives--; document.getElementById('hud-lives').innerText = lives;
+        if (lives <= 0) document.getElementById('gameover-screen').classList.remove('hidden');
+        else loadLevel(currentLevel);
+      }
+    });
+
+    if (chest && !chest.opened && Math.hypot((player.x + 16) - chest.x, (player.y + 20) - chest.y) < 30) {
+      chest.opened = true; triggerQuiz();
+    }
+  }
+
+  function render() {
+    if (currentLevel <= 10) ctx.fillStyle = "#1a0f2e";
+    else if (currentLevel <= 20) ctx.fillStyle = "#2c140e";
+    else if (currentLevel <= 30) ctx.fillStyle = "#0c2431";
+    else if (currentLevel <= 40) ctx.fillStyle = "#112f15";
+    else ctx.fillStyle = "#3d1329";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = currentLevel > 30 ? "#e67e22" : "#27ae60";
+    platforms.forEach(p => {
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.fillStyle = "#2e7d32"; ctx.fillRect(p.x, p.y, p.w, 5);
+      ctx.fillStyle = currentLevel > 30 ? "#e67e22" : "#27ae60";
+    });
+
+    stars.forEach(s => {
+      if (!s.collected) {
+        ctx.fillStyle = "#f1c40f"; ctx.beginPath(); ctx.arc(s.x, s.y, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#fff"; ctx.arc(s.x - 2, s.y - 2, 2, 0, Math.PI * 2); ctx.fill();
+      }
+    });
+
+    if (jetpackItem && !jetpackItem.collected) {
+      ctx.fillStyle = "#e67e22"; ctx.fillRect(jetpackItem.x - 8, jetpackItem.y - 10, 16, 20);
+      ctx.fillStyle = "#3498db"; ctx.fillRect(jetpackItem.x - 5, jetpackItem.y - 5, 10, 8);
+      ctx.fillStyle = "#e74c3c"; ctx.fillRect(jetpackItem.x - 6, jetpackItem.y + 10, 12, 4);
+    }
+
+    if (chest && !chest.opened) {
+      ctx.fillStyle = "#f39c12"; ctx.fillRect(chest.x, chest.y, chest.w, chest.h);
+      ctx.fillStyle = "#8e44ad"; ctx.fillRect(chest.x + 5, chest.y + 5, chest.w - 10, chest.h - 10);
+    }
+
+    distractions.forEach(d => {
+      if (d.type === 'phone') {
+        ctx.fillStyle = "#2c3e50"; ctx.fillRect(d.x, d.y, d.w, d.h);
+        ctx.fillStyle = "#3498db"; ctx.fillRect(d.x + 2, d.y + 3, d.w - 4, d.h - 8);
+        ctx.fillStyle = "#e74c3c"; ctx.fillRect(d.x + 8, d.y + 8, 6, 6);
+      } else if (d.type === 'burger') {
+        ctx.fillStyle = "#d35400"; ctx.fillRect(d.x, d.y, d.w, 8); ctx.fillRect(d.x, d.y + 16, d.w, 8);
+        ctx.fillStyle = "#27ae60"; ctx.fillRect(d.x - 2, d.y + 8, d.w + 4, 3);
+        ctx.fillStyle = "#7f8c8d"; ctx.fillRect(d.x, d.y + 11, d.w, 5);
+      }
+    });
+
+    drawCharacter(player.x, player.y, selectedChar, hasJetpack, keys.up);
+  }
+
+  function drawCharacter(x, y, charType, jetActive, isJumping) {
+    if (jetActive) {
+      ctx.fillStyle = "#7f8c8d"; ctx.fillRect(x - 6, y + 12, 6, 18);
+      ctx.fillStyle = "#3498db"; ctx.fillRect(x - 5, y + 15, 4, 6);
+      if (isJumping) {
+        ctx.fillStyle = "#e74c3c"; ctx.fillRect(x - 5, y + 30, 4, 8);
+        ctx.fillStyle = "#f1c40f"; ctx.fillRect(x - 4, y + 34, 2, 6);
+      }
+    }
+
+    if (charType === 'kingly') {
+      ctx.fillStyle = "#2980b9"; ctx.fillRect(x + 6, y + 26, 20, 16);
+      ctx.fillStyle = "#ecf0f1"; ctx.fillRect(x + 5, y + 14, 22, 13);
+      ctx.fillStyle = "#e67e22"; ctx.fillRect(x + 4, y, 24, 15);
+      ctx.fillRect(x + 4, y - 6, 6, 7); ctx.fillRect(x + 22, y - 6, 6, 7);
+      ctx.fillStyle = "#d35400"; ctx.fillRect(x + 6, y - 4, 2, 4); ctx.fillRect(x + 24, y - 4, 2, 4);
+      ctx.fillStyle = "#fff"; ctx.fillRect(x + 10, y + 8, 12, 6);
+      ctx.fillStyle = "#2c3e50"; ctx.fillRect(x + 8, y + 4, 3, 3); ctx.fillRect(x + 21, y + 4, 3, 3); ctx.fillRect(x + 14, y + 9, 4, 3);
+    } else if (charType === 'mooney') {
+      ctx.fillStyle = "#34495e"; ctx.fillRect(x + 6, y + 26, 20, 16);
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(x + 5, y + 14, 22, 13);
+      ctx.fillStyle = "#fd79a8"; ctx.fillRect(x + 4, y, 24, 15);
+      ctx.fillRect(x + 4, y - 7, 7, 8); ctx.fillRect(x + 21, y - 7, 7, 8);
+      ctx.fillStyle = "#e84393"; ctx.fillRect(x + 6, y - 5, 3, 5); ctx.fillRect(x + 23, y - 5, 3, 5);
+      ctx.fillStyle = "#2d3436"; ctx.fillRect(x + 8, y + 5, 3, 4); ctx.fillRect(x + 21, y + 5, 3, 4);
+      ctx.fillRect(x + 2, y + 9, 4, 1); ctx.fillRect(x + 26, y + 9, 4, 1);
+    } else if (charType === 'dogito') {
+      ctx.fillStyle = "#2980b9"; ctx.fillRect(x + 6, y + 26, 20, 16);
+      ctx.fillStyle = "#e74c3c"; ctx.fillRect(x + 5, y + 14, 22, 13);
+      ctx.fillStyle = "#f1c40f"; ctx.fillRect(x + 4, y, 24, 15);
+      ctx.fillStyle = "#f39c12"; ctx.fillRect(x + 1, y + 2, 5, 12); ctx.fillRect(x + 26, y + 2, 5, 12);
+      ctx.fillStyle = "#f5cd79"; ctx.fillRect(x + 9, y + 7, 14, 7);
+      ctx.fillStyle = "#2c3e50"; ctx.fillRect(x + 8, y + 4, 3, 3); ctx.fillRect(x + 21, y + 4, 3, 3); ctx.fillRect(x + 14, y + 8, 4, 3);
+    }
+  }
+
+  function triggerQuiz() {
+    stopAllAudio();
+    let list = regularPastQuestions;
+    if (currentLevel <= 10) list = regularPastQuestions;
+    else if (currentLevel <= 20) list = irregularPastQuestions;
+    else if (currentLevel <= 30) list = listeningQuestions;
+    else if (currentLevel <= 40) list = presentHabitsQuestions;
+    else list = advancedListeningQuestions;
+
+    const quizIndex = (currentLevel - 1) % list.length;
+    currentQuiz = list[quizIndex];
+
+    if (currentLevel >= 21 && currentLevel <= 30) {
+      document.getElementById('quiz-question').innerText = "🔊 Press Listen Audio to hear the secret word!";
+      document.getElementById('quiz-hint').innerText = "Topic: Listening Comprehension";
+    } else if (currentLevel >= 41) {
+      document.getElementById('quiz-question').innerText = "🔊 Listen to the audio and pick the correct sentence!";
+      document.getElementById('quiz-hint').innerText = "Topic: Sentence Listening";
+    } else {
+      document.getElementById('quiz-question').innerText = currentQuiz.sentence.replace("______", "______ (" + currentQuiz.base + ")");
+      document.getElementById('quiz-hint').innerText = "Topic: " + currentQuiz.sound;
+    }
+
+    const shuffledOpts = [...currentQuiz.opts].sort(() => Math.random() - 0.5);
+    const optsContainer = document.getElementById('quiz-options');
+    optsContainer.innerHTML = '';
+
+    shuffledOpts.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'quiz-opt';
+      btn.innerText = opt;
+      btn.onclick = () => checkAnswer(opt);
+      optsContainer.appendChild(btn);
+    });
+
+    document.getElementById('quiz-screen').classList.remove('hidden');
+  }
+
+  function speakCurrentQuestion() {
+    stopAllAudio();
+    if (!currentQuiz) return;
+    
+    let textToSpeak = currentQuiz.verb;
+    if (currentLevel <= 20 || (currentLevel >= 31 && currentLevel <= 40)) {
+      textToSpeak = currentQuiz.sentence.replace("______", currentQuiz.verb);
+    }
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.9;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function checkAnswer(selectedOpt) {
+    stopAllAudio();
+    if (selectedOpt === currentQuiz.verb) {
+      document.getElementById('quiz-screen').classList.add('hidden');
+      if (currentLevel % 10 === 0) showWorldWinScreen();
+      else loadLevel(currentLevel + 1);
+    } else {
+      alert("Try again! Listen carefully or check the grammar rule.");
+      if (chest) chest.opened = false;
+    }
+  }
+
+  function showWorldWinScreen() {
+    stopAllAudio();
+    document.getElementById('win-player-name').innerText = playerName;
+    const blockNum = Math.floor(currentLevel / 10);
+    const claimCode = "EK-BLOCK" + blockNum + "-" + playerName.substring(0, 3).toUpperCase() + "-" + Math.floor(1000 + Math.random() * 9000);
+    document.getElementById('claim-code').innerText = claimCode;
+    document.getElementById('win-screen').classList.remove('hidden');
+  }
+
+  function nextBlock() {
+    stopAllAudio();
+    document.getElementById('win-screen').classList.add('hidden');
+    if (currentLevel < 50) loadLevel(currentLevel + 1);
+    else { alert("🎉 CONGRATULATIONS! You completed all 50 levels of Edukinglish Quest!"); loadLevel(1); }
+  }
+
+  function restartGame() {
+    stopAllAudio();
+    document.getElementById('gameover-screen').classList.add('hidden');
+    lives = 3; totalStars = 0; nextExtraLifeThreshold = 100;
+    loadLevel(1);
+  }
+</script>
+
+</body>
+</html>
